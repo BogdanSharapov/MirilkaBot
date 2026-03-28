@@ -14,21 +14,29 @@ class Program
 
     static async Task Main(string[] args)
     {
-        string token = "8664165820:AAFKbiWlI2h6tmPpff5G_HAuCjgbEmooQKc";
-        if (string.IsNullOrEmpty(token))
-        {
-            Console.WriteLine("Укажите токен в переменной окружения TELEGRAM_BOT_TOKEN");
-            return;
-        }
+        string token = "8664165820:AAFKbiWlI2h6tmPpff5G_HAuCjgbEmooQKc"; // замените на переменную окружения!
 
         _botClient = new TelegramBotClient(token);
-
         using CancellationTokenSource cts = new CancellationTokenSource();
+
+        // Обработка сигналов завершения (SIGTERM, Ctrl+C)
+        Console.CancelKeyPress += (sender, e) =>
+        {
+            Console.WriteLine("Получен сигнал завершения. Остановка...");
+            e.Cancel = true;
+            cts.Cancel();
+        };
+
+        AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
+        {
+            Console.WriteLine("Процесс завершается. Остановка бота...");
+            cts.Cancel();
+        };
 
         // Настройки получения обновлений
         ReceiverOptions receiverOptions = new ReceiverOptions
         {
-            AllowedUpdates = new[] { UpdateType.Message } // получаем только сообщения
+            AllowedUpdates = new[] { UpdateType.Message }
         };
 
         // Запускаем получение обновлений
@@ -39,26 +47,31 @@ class Program
             cts.Token
         );
 
-        Console.WriteLine("Бот запущен. Нажмите Enter для остановки...");
-        Console.ReadLine();
+        Console.WriteLine("Бот запущен. Ожидание...");
 
-        cts.Cancel(); // останавливаем бота
+        // Ждём, пока не придёт сигнал остановки
+        try
+        {
+            await Task.Delay(-1, cts.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            Console.WriteLine("Бот остановлен.");
+        }
     }
 
-    // Обработчик входящих сообщений
     private static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
         if (update.Type != UpdateType.Message)
             return;
 
         var message = update.Message;
-        if (message.Text == null)
+        if (message?.Text == null)
             return;
 
         var chatId = message.Chat.Id;
         var userName = message.From.FirstName;
 
-        // Команда /start
         if (message.Text.Equals("/start", StringComparison.OrdinalIgnoreCase))
         {
             string welcome = "Привет! Я бот-мирилка 🤝\n" +
@@ -67,33 +80,25 @@ class Program
             return;
         }
 
-        // Команда /mir (или /примирение)
         if (message.Text.Equals("/conflict", StringComparison.OrdinalIgnoreCase) ||
             message.Text.Equals("/конфликт", StringComparison.OrdinalIgnoreCase))
         {
-            // Выбираем случайного участника
-            bool isYou = _random.Next(2) == 0; // 0 — ты, 1 — девушка
-
-            string result;
-            if (isYou)
-                result = $"🎲 Жребий брошен! Первым пишет Богдан.";
-            else
-                result = "🎲 Жребий брошен! Первой пишет Раилина ❤️";
+            bool isYou = _random.Next(2) == 0;
+            string result = isYou
+                ? "🎲 Жребий брошен! Первым пишет Богдан."
+                : "🎲 Жребий брошен! Первой пишет Раилина ❤️";
 
             await botClient.SendMessage(chatId, result, cancellationToken: cancellationToken);
-            return;
         }
     }
 
-    // Обработчик ошибок
     private static Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
     {
         var errorMessage = exception switch
         {
-            ApiRequestException apiRequestException => $"Ошибка Telegram API: {apiRequestException.ErrorCode} - {apiRequestException.Message}",
+            ApiRequestException apiEx => $"Ошибка Telegram API: {apiEx.ErrorCode} - {apiEx.Message}",
             _ => exception.ToString()
         };
-
         Console.WriteLine(errorMessage);
         return Task.CompletedTask;
     }
