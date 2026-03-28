@@ -90,6 +90,12 @@ class Program
 
             await botClient.SendMessage(chatId, result, cancellationToken: cancellationToken);
         }
+        
+        if (message.Text.Equals("/id", StringComparison.OrdinalIgnoreCase))
+        {
+            await botClient.SendMessage(chatId, $"Ваш ID: {chatId}", cancellationToken: cancellationToken);
+            return;
+        }
     }
 
     private static Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
