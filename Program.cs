@@ -12,9 +12,16 @@ class Program
     private static ITelegramBotClient _botClient;
     private static readonly Random _random = new Random();
 
+    private static readonly HashSet<long> _users = new HashSet<long>()
+    { 
+        536999309,
+        552682543
+    };
+        
+
     static async Task Main(string[] args)
     {
-        string token = "8664165820:AAFKbiWlI2h6tmPpff5G_HAuCjgbEmooQKc"; // замените на переменную окружения!
+        string token = "8664165820:AAFKbiWlI2h6tmPpff5G_HAuCjgbEmooQKc";
 
         _botClient = new TelegramBotClient(token);
         using CancellationTokenSource cts = new CancellationTokenSource();
@@ -88,7 +95,18 @@ class Program
                 ? "🎲 Жребий брошен! Первым пишет Богдан."
                 : "🎲 Жребий брошен! Первой пишет Раилина ❤️";
 
-            await botClient.SendMessage(chatId, result, cancellationToken: cancellationToken);
+            foreach (var userId in _users)
+            {
+                try
+                {
+                    await botClient.SendMessage(userId, result, cancellationToken: cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Не удалось отправить сообщение {userId}: {ex.Message}");
+                }
+            }
+            return;
         }
         
         if (message.Text.Equals("/id", StringComparison.OrdinalIgnoreCase))
