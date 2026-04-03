@@ -19,7 +19,7 @@ class Program
         _ = Task.Run(StartWebServer);
 
         // --- Инициализация и запуск Telegram бота (ваш существующий код) ---
-        string token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
+        string token = "8664165820:AAFKbiWlI2h6tmPpff5G_HAuCjgbEmooQKc";
         if (string.IsNullOrEmpty(token)) {
             Console.WriteLine("❌ Токен не найден. Установите переменную окружения TELEGRAM_BOT_TOKEN.");
             return;
